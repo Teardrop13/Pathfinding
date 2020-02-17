@@ -2,10 +2,10 @@ import sys
 import pygame
 import time
 
-# 0 - normalne
-# 1 - przeszkoda
+# 0 - normal
+# 1 - obstacle
 # 2 - start
-# 3 - koniec
+# 3 - target
 
 black = 0, 0, 0
 blue = 0, 0, 255
@@ -38,10 +38,9 @@ buttonEvents = []
 buttonEvents = pygame.key.get_pressed()
 
 for i in array:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
     i.drawRect()
     time.sleep(0.1)
     pygame.display.update()
-
-for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-        sys.exit()
