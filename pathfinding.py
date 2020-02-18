@@ -36,7 +36,7 @@ class Node:
         self.f_cost = 0
         self.rect = pygame.Rect(x*blockSize + margin, y*blockSize + margin, blockSize - 2*margin, blockSize - 2*margin)
 
-    def drawRect(self):
+    def drawNode(self):
         if self.mode == 0:
             pygame.draw.rect(screen, white, self.rect)
         if self.mode == 1:
@@ -50,29 +50,40 @@ class Node:
         self.mode = mode
 
 
-array = [[]]
-for x in range(width):
-    array.append([])
-    for y in range(height):
-        array[x].append(Node(x, y))
+class Grid:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.grid = [[]]
+        for x in range(width):
+            self.grid.append([])
+            for y in range(height):
+                self.grid[x].append(Node(x, y))
+
+    def drawGrid(self):
+        for x in range(self.width):
+            for y in range(self.height):
+                self.grid[x][y].drawNode()
+
+    def setNodeMode(self, x, y, mode):
+        self.grid[x][y].setMode(mode)
 
 buttonEvents = []
-
-buttonEvents = pygame.key.get_pressed()
+grid = Grid(width, height)
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-    for x in range(width):
-        array.append([])
-        for y in range(height):
-            array[x][y].drawRect()
+    grid.drawGrid()
+
+    buttonEvents = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
     x = int(mouse[0] / blockSize)
     y = int(mouse[1] / blockSize)
     if click[0] == 1:
-        array[x][y].setMode(1)
+        grid.setNodeMode(x, y , 2)
+
     time.sleep(0.05)
     pygame.display.update()
