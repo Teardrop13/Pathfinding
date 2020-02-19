@@ -27,6 +27,7 @@ TARGET = 3
 UNVERIFIED = 0
 OPENED = 1
 CLOSED = 2
+IN_PATH = 3
 # modes:
 OBSTACLES_DRAWING = 0
 START_DRAWING = 1
@@ -47,6 +48,7 @@ class Node:
         self.type = NORMAL
         self.x = x
         self.y = y
+        self.previousNode = (0, 0)
         self.state = UNVERIFIED
         self.g_cost = 0  # distance from start
         self.h_cost = 0  # distance to target
@@ -64,14 +66,23 @@ class Node:
                 pygame.draw.rect(screen, green, self.rect)
                 text = self.myfont.render(str(self.f_cost), False, (0,0,0))
                 self.screen.blit(text,(self.x*40 + 10,self.y*40 + 10))
+            elif self.state == IN_PATH:
+                pygame.draw.rect(screen, blue, self.rect)
+                text = self.myfont.render(str(self.f_cost), False, (0,0,0))
+                self.screen.blit(text,(self.x*40 + 10,self.y*40 + 10))
             else:     
                 pygame.draw.rect(screen, white, self.rect)
-        if self.type == OBSTACLE:
+        elif self.type == OBSTACLE:
             pygame.draw.rect(screen, black, self.rect)
-        if self.type == START:
+        elif self.type == START:
             pygame.draw.rect(screen, yellow, self.rect)
-        if self.type == TARGET:
+            text = self.myfont.render(str(self.f_cost), False, (0,0,0))
+            self.screen.blit(text,(self.x*40 + 10,self.y*40 + 10))
+        elif self.type == TARGET:
             pygame.draw.rect(screen, pink, self.rect)
+            text = self.myfont.render(str(self.f_cost), False, (0,0,0))
+            self.screen.blit(text,(self.x*40 + 10,self.y*40 + 10))
+
 
     def setType(self, type):
         self.type = type
@@ -86,6 +97,9 @@ class Node:
         self.g_cost = g_cost
         self.h_cost = h_cost
         self.f_cost = g_cost + h_cost
+
+    def setPreviousNode(self, x, y):
+        self.previousNode = (x, y)
 
 
 class Grid:
@@ -178,7 +192,7 @@ class Grid:
                 for vector in vectors:
                     if current_x+vector[0] in range(0, width) and current_y+vector[1] in range(0, height):
                         if self.grid[current_x+vector[0]][current_y+vector[1]].state != CLOSED:
-                            if vector[0] != 0 or vector[1] != 0:
+                            if vector[0] != 0 and vector[1] != 0:
                                 added_g_cost = 14
                             else:
                                 added_g_cost = 10
@@ -187,36 +201,25 @@ class Grid:
 
                             if g_cost + h_cost < self.grid[current_x+vector[0]][current_y+vector[1]].f_cost or self.grid[current_x+vector[0]][current_y+vector[1]].f_cost == 0:
                                 self.grid[current_x+vector[0]][current_y+vector[1]].setCosts(g_cost, h_cost)
+                                self.grid[current_x+vector[0]][current_y+vector[1]].setPreviousNode(current_x, current_y)
                                 self.openedNodes.append((current_x+vector[0], current_y+vector[1]))
                                 self.grid[current_x+vector[0]][current_y+vector[1]].state = OPENED
                 self.openedNodes.remove((current_x, current_y))
                 self.grid[current_x][current_y].state = CLOSED
 
             self.drawGrid()
-            time.sleep(0.2)
+            time.sleep(0.05)
             pygame.display.update()
         return True
 
 
     def drawPath(self):
-        current_x = self.target_x
-        current_y = self.target_y
-        prev_current_x = self.target_x
-        prev_current_y = self.target_y
-        shortestPath = []
-        while current_x != self.start_x or current_y != self.start_y:
-            lowest_f_cost = self.grid[current_x+1][current_y].f_cost
-            lowest_f_cost_cords = (current_x+1, current_y)
-            for vector in vectors:
-                if self.grid[current_x+vector[0]][current_y+vector[1]].f_cost <= lowest_f_cost:
-                    if current_x != prev_current_x and current_y != prev_current_y:
-                        lowest_f_cost = self.grid[current_x+vector[0]][current_y+vector[1]].f_cost
-                        lowest_f_cost_cords = (current_x+vector[0], current_y+vector[1])
-            shortestPath.append(lowest_f_cost_cords)
+        previousNode = self.grid[self.target_x][self.target_y].previousNode
+        print("end")
+        while previousNode[0] != self.start_x or previousNode[1] != self.start_y:
+            self.grid[previousNode[0]][previousNode[1]].state = IN_PATH
+            previousNode = self.grid[previousNode[0]][previousNode[1]].previousNode
 
-
-        
-        
         self.drawGrid()
         pygame.display.update()
 
@@ -270,10 +273,8 @@ while True:
 
     if mode == SOLVING_MAZE:
         grid.pathfinding()
-        #grid.drawPath()
+        grid.drawPath()
         mode = OBSTACLES_DRAWING
         
-
-
     time.sleep(0.03)
     pygame.display.update()
