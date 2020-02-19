@@ -42,8 +42,8 @@ mode = OBSTACLES_DRAWING
 
 
 class Node:
-    def __init__(self, x, y, screen):
-        self.myfont = pygame.font.SysFont('Arial', 15)
+    def __init__(self, x, y, screen, font):
+        self.myfont = font
         self.screen = screen
         self.type = NORMAL
         self.x = x
@@ -105,8 +105,9 @@ class Node:
 class Grid:
     vectors = {(0, -1), (1, -1), (1, 0), (1, 1),
            (0, 1), (-1, 1), (-1, 0), (-1, -1)}
-    def __init__(self, width, height, screen):
+    def __init__(self, width, height, screen, font):
         self.screen = screen
+        self.myfont = font
         self.width = width
         self.height = height
         self.grid = [[]]
@@ -120,7 +121,7 @@ class Grid:
         for x in range(width):
             self.grid.append([])
             for y in range(height):
-                self.grid[x].append(Node(x, y, self.screen))
+                self.grid[x].append(Node(x, y, self.screen, self.myfont))
 
     def drawGrid(self):
         for x in range(self.width):
@@ -131,9 +132,9 @@ class Grid:
         if type == START:
             if self.startNodeReady == True:
                 self.grid[self.start_x][self.start_y].setType(NORMAL)
+            self.startNodeReady = True
             self.start_x = x
             self.start_y = y
-            self.startNodeReady = True
         elif type == TARGET:
             if self.targetNodeReady == True:
                 self.grid[self.target_x][self.target_y].setType(NORMAL)
@@ -151,6 +152,17 @@ class Grid:
             self.startNodeReady = False
         elif self.target_x and self.target_y == y and type != TARGET:
             self.targetNodeReady = False
+
+    def resetNodeType(self):
+        for x in range(width):
+            for y in range(height):
+                if self.grid[x][y].type != OBSTACLE:
+                    self.grid[x][y].state = UNVERIFIED
+                self.grid[x][y].previousNode = (0, 0)
+                self.grid[x][y].h_cost = 0
+                self.grid[x][y].g_cost = 0
+                self.grid[x][y].f_cost = 0
+
 
     def findLowest_f_cost_nodes(self):
         # returns list of coordinates of nodes
@@ -215,7 +227,6 @@ class Grid:
 
     def drawPath(self):
         previousNode = self.grid[self.target_x][self.target_y].previousNode
-        print("end")
         while previousNode[0] != self.start_x or previousNode[1] != self.start_y:
             self.grid[previousNode[0]][previousNode[1]].state = IN_PATH
             previousNode = self.grid[previousNode[0]][previousNode[1]].previousNode
@@ -227,10 +238,10 @@ class Grid:
 pygame.init()
 screen = pygame.display.set_mode(size)
 pygame.font.init()
-myfont = pygame.font.SysFont('Arial', 6)
+myfont = pygame.font.SysFont('Arial', 15)
 
 buttonEvents = []
-grid = Grid(width, height, screen)
+grid = Grid(width, height, screen, myfont)
 
 while True:
     for event in pygame.event.get():
@@ -272,6 +283,7 @@ while True:
             grid.setNodeType(x, y, NORMAL)
 
     if mode == SOLVING_MAZE:
+        grid.resetNodeType()
         grid.pathfinding()
         grid.drawPath()
         mode = OBSTACLES_DRAWING
