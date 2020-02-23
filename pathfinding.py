@@ -128,6 +128,21 @@ class Grid:
             for y in range(self.height):
                 self.grid[x][y].drawNode()
 
+    def clear(self):
+        self.grid.clear()
+        self.openedNodes.clear()
+        self.start_x = 0
+        self.start_y = 0
+        self.target_x = 0
+        self.target_y = 0
+        self.openedNodes.clear()
+        self.startNodeReady = False
+        self.targetNodeReady = False
+        for x in range(width):
+            self.grid.append([])
+            for y in range(height):
+                self.grid[x].append(Node(x, y, self.screen, self.myfont))
+
     def setNodeType(self, x, y, type):
         if type == START:
             if self.startNodeReady == True:
@@ -260,6 +275,8 @@ while True:
         mode = TARGET_DRAWING
     elif buttonEvents[pygame.K_4]:
         mode = SOLVING_MAZE
+    elif buttonEvents[pygame.K_0]:
+        grid.clear()
 
     if mode == OBSTACLES_DRAWING:
         if click[0] == 1:
