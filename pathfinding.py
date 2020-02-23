@@ -46,6 +46,7 @@ class Node:
         self.myfont = font
         self.screen = screen
         self.type = NORMAL
+        self.color = white
         self.x = x
         self.y = y
         self.previousNode = (0, 0)
@@ -59,27 +60,22 @@ class Node:
     def drawNode(self):
         if self.type == NORMAL:
             if self.state == CLOSED:
-                pygame.draw.rect(screen, red, self.rect)
-                text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
-                self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
+                self.color = red
             elif self.state == OPENED:
-                pygame.draw.rect(screen, green, self.rect)
-                text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
-                self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
+                self.color = green
             elif self.state == IN_PATH:
-                pygame.draw.rect(screen, blue, self.rect)
-                text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
-                self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
+                self.color = blue
             else:
-                pygame.draw.rect(screen, white, self.rect)
+                self.color = white
         elif self.type == OBSTACLE:
-            pygame.draw.rect(screen, black, self.rect)
+            self.color = black
         elif self.type == START:
-            pygame.draw.rect(screen, yellow, self.rect)
-            text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
-            self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
+            self.color = yellow
         elif self.type == TARGET:
-            pygame.draw.rect(screen, pink, self.rect)
+            self.color = pink
+
+        pygame.draw.rect(screen, self.color, self.rect)
+        if self.state in (OPENED, CLOSED, IN_PATH):
             text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
             self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
 
