@@ -1,6 +1,7 @@
 import sys
-import pygame
 import time
+
+import pygame
 
 
 black = 0, 0, 0  # obstacles
@@ -10,10 +11,11 @@ pink = 255, 51, 204  # target node
 green = 0, 255, 0  # open nodes
 red = 255, 0, 0  # closed nodes
 white = 255, 255, 255  # normal nodes
+
 blockSize = 40
+margin = 1  # distance between nodes
 width = 20
 height = 15
-margin = 1
 size = 800, 600
 
 
@@ -42,6 +44,17 @@ mode = OBSTACLES_DRAWING
 
 
 class Node:
+    '''
+    Nodes that are not obstacles and have been already checked 
+    for lowest f_cost have f_cost written on them.
+
+    Node possible states:
+    UNVERIFIED - Node that hasnt been considered yet, white color on visualisation
+    OPENED - Node that could have lower f_cost, green
+    CLOSED - considered and has lowest possible f_cost, red
+    IN_PATH state needed only for redrawing grid purpose after path has been found, blue
+    '''
+
     def __init__(self, x, y, screen, font):
         self.myfont = font
         self.screen = screen
@@ -57,50 +70,39 @@ class Node:
         self.rect = pygame.Rect(x*blockSize + margin, y*blockSize +
                                 margin, blockSize - 2*margin, blockSize - 2*margin)
 
-    def drawNode(self):
+    def setColor(self):
+        # Sets color automaticly depending on type and state 
         if self.type == NORMAL:
             if self.state == CLOSED:
-                self.color = red
+                return red
             elif self.state == OPENED:
-                self.color = green
+                return green
             elif self.state == IN_PATH:
-                self.color = blue
+                return blue
             else:
-                self.color = white
+                return white
         elif self.type == OBSTACLE:
-            self.color = black
+            return black
         elif self.type == START:
-            self.color = yellow
+            return yellow
         elif self.type == TARGET:
-            self.color = pink
+            return pink
 
+    def drawNode(self):
+        self.color = self.setColor()
         pygame.draw.rect(screen, self.color, self.rect)
+
         if self.state in (OPENED, CLOSED, IN_PATH):
             text = self.myfont.render(str(self.f_cost), False, (0, 0, 0))
             self.screen.blit(text, (self.x*40 + 10, self.y*40 + 10))
-
-    def setType(self, type):
-        self.type = type
-
-    def isClosed(self):
-        return self.state
-
-    def close(self):
-        self.state = CLOSED
 
     def setCosts(self, g_cost, h_cost):
         self.g_cost = g_cost
         self.h_cost = h_cost
         self.f_cost = g_cost + h_cost
 
-    def setPreviousNode(self, x, y):
-        self.previousNode = (x, y)
-
 
 class Grid:
-    vectors = {(0, -1), (1, -1), (1, 0), (1, 1),
-               (0, 1), (-1, 1), (-1, 0), (-1, -1)}
-
     def __init__(self, width, height, screen, font):
         self.screen = screen
         self.myfont = font
@@ -123,6 +125,7 @@ class Grid:
         for x in range(self.width):
             for y in range(self.height):
                 self.grid[x][y].drawNode()
+            pygame.display.update()
 
     def clear(self):
         self.grid.clear()
@@ -142,13 +145,13 @@ class Grid:
     def setNodeType(self, x, y, type):
         if type == START:
             if self.startNodeReady == True:
-                self.grid[self.start_x][self.start_y].setType(NORMAL)
+                self.grid[self.start_x][self.start_y].type = NORMAL
             self.startNodeReady = True
             self.start_x = x
             self.start_y = y
         elif type == TARGET:
             if self.targetNodeReady == True:
-                self.grid[self.target_x][self.target_y].setType(NORMAL)
+                self.grid[self.target_x][self.target_y].type = NORMAL
             self.targetNodeReady = True
             self.target_x = x
             self.target_y = y
@@ -157,7 +160,7 @@ class Grid:
         else:
             self.grid[x][y].state = UNVERIFIED
 
-        self.grid[x][y].setType(type)
+        self.grid[x][y].type = type
 
         if self.start_x == x and self.start_y == y and type != START:
             self.startNodeReady = False
@@ -176,7 +179,7 @@ class Grid:
 
     def findLowest_f_cost_nodes(self):
         # returns list of coordinates of nodes
-        # return type list of tuples
+        # return type: list of tuples
 
         lowest_f_cost = self.grid[self.openedNodes[0][0]][self.openedNodes[0][1]].f_cost
         listOfNodes = []
@@ -192,6 +195,7 @@ class Grid:
         return listOfNodes
 
     def calculate_h_cost(self, x, y):
+        # distance to target
         horizontalDistance = abs(self.target_x - x)
         verticalDistance = abs(self.target_y - y)
 
@@ -201,37 +205,48 @@ class Grid:
         return 10*straightDistance + 14*diagonalDistance
 
     def pathfinding(self):
+
         current_x = self.start_x
         current_y = self.start_y
         self.openedNodes = [(current_x, current_y)]
+
         while current_x != self.target_x or current_y != self.target_y:
             listOfNodes = self.findLowest_f_cost_nodes()
             for node in listOfNodes:
                 current_x = node[0]
                 current_y = node[1]
                 for vector in vectors:
-                    if current_x+vector[0] in range(0, width) and current_y+vector[1] in range(0, height):
-                        if self.grid[current_x+vector[0]][current_y+vector[1]].state != CLOSED:
-                            if vector[0] != 0 and vector[1] != 0:
-                                added_g_cost = 14
-                            else:
-                                added_g_cost = 10
-                            g_cost = self.grid[current_x][current_y].g_cost + added_g_cost
-                            h_cost = self.calculate_h_cost(current_x+vector[0], current_y+vector[1])
 
-                            if g_cost + h_cost < self.grid[current_x+vector[0]][current_y+vector[1]].f_cost or self.grid[current_x+vector[0]][current_y+vector[1]].f_cost == 0:
-                                self.grid[current_x+vector[0]][current_y + vector[1]].setCosts(g_cost, h_cost)
-                                self.grid[current_x+vector[0]][current_y + vector[1]].setPreviousNode(current_x, current_y)
-                                self.openedNodes.append((current_x+vector[0], current_y+vector[1]))
-                                self.grid[current_x+vector[0]][current_y+vector[1]].state = OPENED
+                    # Coordinates of node that will be considered in this iteration
+                    x = current_x+vector[0]
+                    y = current_y+vector[1]
+
+                    if x in range(0, width) and y in range(0, height):
+                        if self.grid[x][y].state != CLOSED:
+                            if vector[0] == 0 or vector[1] == 0:
+                                added_g_cost = 10
+                            else:
+                                added_g_cost = 14
+                            g_cost = self.grid[current_x][current_y].g_cost + added_g_cost
+                            h_cost = self.calculate_h_cost(x, y)
+                            if g_cost + h_cost < self.grid[x][y].f_cost or self.grid[x][y].f_cost == 0:
+                                self.grid[x][current_y + vector[1]].setCosts(g_cost, h_cost)
+                                self.grid[x][current_y + vector[1]].previousNode = (current_x, current_y)
+                                self.openedNodes.append((x, y))
+                                self.grid[x][y].state = OPENED
+
                 self.openedNodes.remove((current_x, current_y))
                 self.grid[current_x][current_y].state = CLOSED
+                if len(self.openedNodes) == 0:
+                    self.drawGrid()
+                    return False
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     sys.exit()
             self.drawGrid()
             time.sleep(0.05)
-            pygame.display.update()
+
         return True
 
     def drawPath(self):
@@ -241,7 +256,6 @@ class Grid:
             previousNode = self.grid[previousNode[0]][previousNode[1]].previousNode
 
         self.drawGrid()
-        pygame.display.update()
 
 
 pygame.init()
@@ -280,23 +294,22 @@ while True:
         if click[2] == 1:
             grid.setNodeType(x, y, NORMAL)
 
-    if mode == START_DRAWING:
+    elif mode == START_DRAWING:
         if click[0] == 1:
             grid.setNodeType(x, y, START)
         if click[2] == 1:
             grid.setNodeType(x, y, NORMAL)
 
-    if mode == TARGET_DRAWING:
+    elif mode == TARGET_DRAWING:
         if click[0] == 1:
             grid.setNodeType(x, y, TARGET)
         if click[2] == 1:
             grid.setNodeType(x, y, NORMAL)
 
-    if mode == SOLVING_MAZE:
-        grid.resetNodeType()
+    elif mode == SOLVING_MAZE:
+        grid.resetNodeType()  # Needed for rerun algorithm purpose
         grid.pathfinding()
         grid.drawPath()
         mode = OBSTACLES_DRAWING
 
     time.sleep(0.03)
-    pygame.display.update()
