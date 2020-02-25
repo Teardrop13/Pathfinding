@@ -13,11 +13,10 @@ red = 255, 0, 0  # closed nodes
 white = 255, 255, 255  # normal nodes
 
 blockSize = 40
-margin = 1  # distance between nodes
+margin = 1  # distance between squeres
 width = 20
 height = 15
 size = 800, 600
-
 
 # Constants:
 # Node types:
@@ -36,11 +35,10 @@ START_DRAWING = 1
 TARGET_DRAWING = 2
 SOLVING_MAZE = 3
 
+mode = OBSTACLES_DRAWING
 
 vectors = {(0, -1), (1, -1), (1, 0), (1, 1),
            (0, 1), (-1, 1), (-1, 0), (-1, -1)}
-
-mode = OBSTACLES_DRAWING
 
 
 class Node:
@@ -52,7 +50,7 @@ class Node:
     UNVERIFIED - Node that hasnt been considered yet, white color on visualisation
     OPENED - Node that could have lower f_cost, green
     CLOSED - considered and has lowest possible f_cost, red
-    IN_PATH state needed only for redrawing grid purpose after path has been found, blue
+    IN_PATH - state needed only for redrawing grid after path has been found, blue
     '''
 
     def __init__(self, x, y, screen, font):
@@ -103,19 +101,27 @@ class Node:
 
 
 class Grid:
+    '''
+    It's a wrapper of 2d list of nodes
+    '''
     def __init__(self, width, height, screen, font):
         self.screen = screen
         self.myfont = font
+
         self.width = width
         self.height = height
         self.grid = [[]]
+
+        # Start and target coordinates when the ...ready flags are set False
         self.start_x = 0
         self.start_y = 0
         self.target_x = 0
         self.target_y = 0
-        self.openedNodes = []  # list of closest opened nodes
         self.startNodeReady = False
         self.targetNodeReady = False
+
+        self.openedNodes = []
+
         for x in range(width):
             self.grid.append([])
             for y in range(height):
@@ -125,18 +131,21 @@ class Grid:
         for x in range(self.width):
             for y in range(self.height):
                 self.grid[x][y].drawNode()
-            pygame.display.update()
+        pygame.display.update()
 
-    def clear(self):
+    def clearGrid(self):
         self.grid.clear()
         self.openedNodes.clear()
+
         self.start_x = 0
         self.start_y = 0
         self.target_x = 0
         self.target_y = 0
-        self.openedNodes.clear()
         self.startNodeReady = False
         self.targetNodeReady = False
+
+        self.openedNodes.clear()
+
         for x in range(width):
             self.grid.append([])
             for y in range(height):
@@ -167,7 +176,10 @@ class Grid:
         elif self.target_x == x and self.target_y == y and type != TARGET:
             self.targetNodeReady = False
 
-    def resetNodeType(self):
+    def resetNodes(self):
+        '''
+        Reset nodes to the initial state. Necessery for rerunning visualisation.
+        '''
         for x in range(width):
             for y in range(height):
                 if self.grid[x][y].type != OBSTACLE:
@@ -178,9 +190,10 @@ class Grid:
                 self.grid[x][y].f_cost = 0
 
     def findLowest_f_cost_nodes(self):
-        # returns list of coordinates of nodes
-        # return type: list of tuples
-
+        '''
+        Returns list of coordinates of nodes
+        Return type: list of tuples
+        '''
         lowest_f_cost = self.grid[self.openedNodes[0][0]][self.openedNodes[0][1]].f_cost
         listOfNodes = []
 
@@ -195,7 +208,11 @@ class Grid:
         return listOfNodes
 
     def calculate_h_cost(self, x, y):
-        # distance to target
+        '''
+        Distance to target. Doesn't consider obstacles.
+        10 - distance in straight line
+        14 - diagonal distance
+        '''
         horizontalDistance = abs(self.target_x - x)
         verticalDistance = abs(self.target_y - y)
 
@@ -205,7 +222,10 @@ class Grid:
         return 10*straightDistance + 14*diagonalDistance
 
     def pathfinding(self):
-
+        '''
+        Main algorithm. Calculates f_costs until it finds target node.
+        Returns True when the path is found, False otherwise.
+        '''
         current_x = self.start_x
         current_y = self.start_y
         self.openedNodes = [(current_x, current_y)]
@@ -250,12 +270,14 @@ class Grid:
         return True
 
     def drawPath(self):
+        '''
+        Marks 'IN_PATH' nodes that have lowest f_costs. Goes recursivly through nodes 
+        starting from the target node.
+        '''
         previousNode = self.grid[self.target_x][self.target_y].previousNode
         while previousNode[0] != self.start_x or previousNode[1] != self.start_y:
             self.grid[previousNode[0]][previousNode[1]].state = IN_PATH
             previousNode = self.grid[previousNode[0]][previousNode[1]].previousNode
-
-        self.drawGrid()
 
 
 pygame.init()
@@ -263,17 +285,19 @@ screen = pygame.display.set_mode(size)
 pygame.font.init()
 myfont = pygame.font.SysFont('Arial', 15)
 
-buttonEvents = []
 grid = Grid(width, height, screen, myfont)
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
+
     grid.drawGrid()
+
     buttonEvents = pygame.key.get_pressed()
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
+
     x = int(mouse[0] / blockSize)
     y = int(mouse[1] / blockSize)
 
@@ -286,7 +310,7 @@ while True:
     elif buttonEvents[pygame.K_4]:
         mode = SOLVING_MAZE
     elif buttonEvents[pygame.K_0]:
-        grid.clear()
+        grid.clearGrid()
 
     if mode == OBSTACLES_DRAWING:
         if click[0] == 1:
@@ -307,9 +331,9 @@ while True:
             grid.setNodeType(x, y, NORMAL)
 
     elif mode == SOLVING_MAZE:
-        grid.resetNodeType()  # Needed for rerun algorithm purpose
-        grid.pathfinding()
-        grid.drawPath()
+        grid.resetNodes()  # Required for rerun algorithm purpose
+        if grid.pathfinding():
+            grid.drawPath()
         mode = OBSTACLES_DRAWING
 
     time.sleep(0.03)
